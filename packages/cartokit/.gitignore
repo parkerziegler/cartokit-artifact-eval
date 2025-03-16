@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules
+
+# Svelte
+/build
+/.svelte-kit
+/package
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Logs
+pnpm-debug.log*
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# VSCode
+.vscode
+
+# Vercel
+.vercel
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/tests/results/

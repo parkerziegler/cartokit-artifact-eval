@@ -1,0 +1,27 @@
+{
+  "name": "cartokit-artifact-eval",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The artifact evaluation for Fast Direct Manipulation Programming with Patch-Reconciliation Correspondence, to appear at PLDI '25.",
+  "keywords": [
+    "artifact evaluation",
+    "cartokit",
+    "direct manipulation programming",
+    "pldi",
+    "patch-recon"
+  ],
+  "author": {
+    "name": "Parker Ziegler",
+    "email": "peziegler@cs.berkeley.edu"
+  },
+  "contributors": [
+    {
+      "name": "Justin Lubin",
+      "email": "justinlubin@berkeley.edu"
+    },
+    {
+      "name": "Sarah E. Chasins",
+      "email": "schasins@cs.berkeley.edu"
+    }
+  ]
+}

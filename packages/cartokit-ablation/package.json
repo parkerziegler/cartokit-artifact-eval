@@ -1,0 +1,22 @@
+{
+  "name": "cartokit-ablation",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The ablation study for Fast Direct Manipulation Programming with Patch-Reconciliation Correspondence, to appear at PLDI '25.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.48.0",
+    "@types/node": "^22.13.10",
+    "vite": "^5.4.8"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "lodash-es": "^4.17.21",
+    "mapbox-gl": "^3.7.0"
+  }
+}

@@ -1,0 +1,31 @@
+# OS
+.DS_Store
+
+# Node
+node_modules
+
+# SvelteKit
+/build
+/.svelte-kit
+/package
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# pnpm
+pnpm-lock.yaml
+
+# Vercel
+/.vercel
+
+# VSCode
+/.vscode
+
+# Test data
+tests/data/*
+
+# Astro
+/docs/.astro
+/docs/dist
