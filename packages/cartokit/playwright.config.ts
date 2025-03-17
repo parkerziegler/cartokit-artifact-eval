@@ -20,7 +20,7 @@ export default defineConfig({
   reporter: 'line',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    baseURL: 'http://localhost:4173/',
+    baseURL: 'http://localhost:5173/',
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     video: 'on'
@@ -32,15 +32,19 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
-          args: ['--use-gl=egl', '--ignore-gpu-blocklist', '--use-gl=angle']
+          args: [
+            '--ignore-gpu-blocklist',
+            '--use-gl=angle',
+            '--use-angle=gl-egl'
+          ]
         }
       }
     }
   ],
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'pnpm build && pnpm preview',
-    url: 'http://localhost:4173/',
+    command: 'pnpm dev',
+    url: 'http://localhost:5173/',
     reuseExistingServer: !process.env.CI
   }
 });
