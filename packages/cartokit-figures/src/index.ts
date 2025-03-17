@@ -8,6 +8,7 @@ import * as d3 from "d3";
 import { JSDOM } from "jsdom";
 import * as _ from "lodash-es";
 import sharp from "sharp";
+import { sampleRankCorrelation } from "simple-statistics";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
@@ -592,6 +593,73 @@ async function renderPlotToPNG(
 }
 
 /**
+ * Generate the median speedups from reconciliation across the full dataset.
+ *
+ * @param fe – The array of forward evaluation traces.
+ * @param feTTQ – The array of forward evaluation time-to-quiescent traces.
+ * @param recon – The array of reconciliation traces.
+ * @param reconTTQ – The array of reconciliation time-to-quiescent traces.
+ * @returns – An object containing the median speedup factors from reconcili-
+ * ation for code execution and time-to-quiescent.
+ */
+function generateMedianSpeedup(
+  fe: Trace[],
+  feTTQ: Trace[],
+  recon: Trace[],
+  reconTTQ: Trace[]
+): {
+  ceSpeedup: number;
+  ttqSpeedup: number;
+} {
+  const medianFe = d3.median(fe, (d) => d.duration);
+  const medianRecon = d3.median(recon, (d) => d.duration);
+
+  const medianFeTTQ = d3.median(feTTQ, (d) => d.duration);
+  const medianReconTTQ = d3.median(reconTTQ, (d) => d.duration);
+
+  const ceSpeedup = medianFe / medianRecon;
+  const ttqSpeedup = medianFeTTQ / medianReconTTQ;
+
+  return {
+    ceSpeedup,
+    ttqSpeedup,
+  };
+}
+
+/**
+ * Generate the Spearman's rank correlation between forward evaluation time-to-
+ * quiescent and speedup from reconciliation.
+ *
+ * @param feTTQWithReconSpeedups – An array of objects containing the median
+ * forward evaluation time-to-quiescent and speedup from reconciliation for each
+ * program-workflow pair.
+ * @returns – The Spearman's rank correlation coefficient.
+ */
+function generateFeTTQSpeedupCorrelation(feTTQWithReconSpeedups: TTQSpeedup[]) {
+  const feTTQ = feTTQWithReconSpeedups.map((d) => d.fe);
+  const speedup = feTTQWithReconSpeedups.map((d) => d.speedup);
+
+  return sampleRankCorrelation(feTTQ, speedup);
+}
+
+/**
+ * Generate the Spearman's rank correlation between reconciliation code execu-
+ * tion and reconciliation time-to-quiescent.
+ *
+ * @param reconCETTQ – An array of objects containing the reconciliation code
+ * execution and time-to-quiescent durations for each program-workflow pair.
+ * @returns – The Spearman's rank correlation coefficient.
+ */
+function generateReconCETTQCorrelation(
+  reconCETTQ: ReconTTQCERunTime[]
+): number {
+  const recon = reconCETTQ.map((d) => d.ce);
+  const reconTTQ = reconCETTQ.map((d) => d.ttq);
+
+  return sampleRankCorrelation(recon, reconTTQ);
+}
+
+/**
  * Main function to load data, generate plots, and save them to disk.
  */
 async function main() {
@@ -634,6 +702,27 @@ async function main() {
   plotFigure6(feRecon);
   plotFigure7(feTTQWithReconSpeedups);
   plotFigure9(reconCETTQ);
+
+  const medianSpeedup = generateMedianSpeedup(fe, feTTQ, recon, reconTTQ);
+  const feTTQSpeedupCorrelation = generateFeTTQSpeedupCorrelation(
+    feTTQWithReconSpeedups
+  );
+  const reconCETTQCorrelation = generateReconCETTQCorrelation(reconCETTQ);
+
+  const stats = {
+    "Median Speedup from Reconciliation (Code Execution)":
+      medianSpeedup.ceSpeedup,
+    "Median Speedup from Reconciliation (TTQ)": medianSpeedup.ttqSpeedup,
+    "Spearman's Rank Correlation between Forward Evaluation (TTQ) and Speedup from Reconciliation":
+      feTTQSpeedupCorrelation,
+    "Spearman's Rank Correlation between Reconciliation (Code Execution) and Reconciliation (TTQ)":
+      reconCETTQCorrelation,
+  };
+
+  await fsPromises.writeFile(
+    path.resolve(__dirname, "../output/stats.json"),
+    JSON.stringify(stats, null, 2)
+  );
 }
 
 main();
