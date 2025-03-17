@@ -4,14 +4,14 @@ set -e
 echo "=== Running reconciliation benchmarks ==="
 cd /app/packages/cartokit
 for ((i = 1; i <= TRIALS; i++)); do
-  echo "=== Trial $i ==="
+  echo "=== Trial $i of $TRIALS ==="
   pnpm exec playwright test
 done
 
 echo "=== Running forward evaluation benchmarks ==="
 cd /app/packages/cartokit-ablation
 for ((i = 1; i <= TRIALS; i++)) do
-  echo "=== Trial $i ==="
+  echo "=== Trial $i of $TRIALS ==="
   pnpm exec playwright test
 done
 
