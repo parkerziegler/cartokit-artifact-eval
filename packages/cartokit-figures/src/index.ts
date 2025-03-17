@@ -11,7 +11,14 @@ import sharp from "sharp";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
-interface Datum {
+/**
+ * Represents a single trace of a performance metric.
+ *
+ * @property programId - The ID of the program.
+ * @property playwrightWorkflowId - The ID of the Playwright workflow.
+ * @property duration - The duration of the trace, in milliseconds.
+ */
+interface Trace {
   programId: string;
   playwrightWorkflowId: string;
   duration: number;
@@ -25,35 +32,44 @@ interface Datum {
  * (recon), forward evaluation time-to-quiescent (fe-ttq), and reconciliation
  * time-to-quiescent (recon-ttq).
  */
-async function loadInputData(): Promise<{
-  study1Fe: Datum[];
-  study1Recon: Datum[];
-  study1FeTTQ: Datum[];
-  study1ReconTTQ: Datum[];
+async function loadTraces(): Promise<{
+  fe: Trace[];
+  recon: Trace[];
+  feTTQ: Trace[];
+  reconTTQ: Trace[];
 }> {
   const directory = path.resolve(__dirname, "../input");
   const files = ["fe.json", "recon.json", "fe-ttq.json", "recon-ttq.json"];
 
   try {
-    const [study1Fe, study1Recon, study1FeTTQ, study1ReconTTQ] =
-      await Promise.all(
-        files.map((file) =>
-          fsPromises.readFile(path.resolve(directory, file), "utf-8")
-        )
-      ).then((data) => data.map((d) => JSON.parse(d) as Datum[]));
+    const [fe, recon, feTTQ, reconTTQ] = await Promise.all(
+      files.map((file) =>
+        fsPromises.readFile(path.resolve(directory, file), "utf-8")
+      )
+    ).then((data) => data.map((d) => JSON.parse(d) as Trace[]));
 
     return {
-      study1Fe,
-      study1Recon,
-      study1FeTTQ,
-      study1ReconTTQ,
+      fe,
+      recon,
+      feTTQ,
+      reconTTQ,
     };
   } catch (error) {
     console.error("Error loading files:", error);
   }
 }
 
-interface MedianRuntime {
+/**
+ * Represents the median runtime for a program-workflow pair.
+ *
+ * @property workflow - The name of the workflow.
+ * @property program - The name of the program.
+ * @property duration - The median duration of traces for the program-workflow
+ * pair, in milliseconds.
+ * @property workflowId - The ID of the workflow.
+ * @property programId - The ID of the program.
+ */
+interface MedianRunTime {
   workflow: string;
   program: string;
   duration: number;
@@ -62,17 +78,16 @@ interface MedianRuntime {
 }
 
 /**
- * Derive the median runtime for each program and workflow (interaction pair) in
- * the dataset.
+ * Derive the median runtime for each program-workflow pair (interaction pair)
+ * in the dataset.
  *
- * @param arr – An array of performance metrics for a given measurement
- * condition.
- * @returns – An array of objects containing the median runtime for each program
- * and workflow in the dataset.
+ * @param traces – An array of performance traces for a given condition.
+ * @returns – An array of objects containing the median runtime for each pro-
+ * gram-workflow pair (interaction-pair) in the dataset.
  */
-function deriveMedianRuntime(arr: Datum[]): MedianRuntime[] {
+function deriveMedianRunTime(traces: Trace[]): MedianRunTime[] {
   const ipPairs = _.groupBy(
-    arr,
+    traces,
     (d) => `${d.playwrightWorkflowId}__${d.programId}`
   );
 
@@ -104,7 +119,22 @@ function deriveMedianRuntime(arr: Datum[]): MedianRuntime[] {
   return _.sortBy(medians, ["workflowId", "programId"]);
 }
 
-interface PairwiseDatum {
+/**
+ * Represents the pairwise median runtimes for forward evaluation and reconcil-
+ * iation.
+ *
+ * @property fe - The median runtime for forward evaluation, in milliseconds.
+ * @property recon - The median runtime for reconciliation, in milliseconds.
+ * @property x1 - The lower bound of the standard error for forward evaluation,
+ * in milliseconds.
+ * @property x2 - The upper bound of the standard error for forward evaluation,
+ * in milliseconds.
+ * @property y1 - The lower bound of the standard error for reconciliation,
+ * in milliseconds.
+ * @property y2 - The upper bound of the standard error for reconciliation,
+ * in milliseconds.
+ */
+interface PairwiseMedianRunTime {
   fe: number;
   recon: number;
   x1: number;
@@ -115,7 +145,7 @@ interface PairwiseDatum {
 
 /**
  * Generate pairwise comparisons between the median runtimes of forward
- * evaluation and reconciliation for each program and workflow in the dataset.
+ * evaluation and reconciliation for each program-workflow pair in the dataset.
  *
  * @param feMedians – The array of median runtimes for forward evaluation.
  * @param feTraces – The array of all forward evaluation traces.
@@ -124,12 +154,12 @@ interface PairwiseDatum {
  * @returns – An array of pairwise comparisons between forward evaluation and
  * reconciliation runtimes.
  */
-function generatePairwiseComparisons(
-  feMedians: MedianRuntime[],
-  feTraces: Datum[],
-  reconMedians: MedianRuntime[],
-  reconTraces: Datum[]
-): PairwiseDatum[] {
+function generatePairwiseMedianRunTimes(
+  feMedians: MedianRunTime[],
+  feTraces: Trace[],
+  reconMedians: MedianRunTime[],
+  reconTraces: Trace[]
+): PairwiseMedianRunTime[] {
   return feMedians.map((feMedian) => {
     const reconMedian = reconMedians.find(
       (med) =>
@@ -174,7 +204,18 @@ function generatePairwiseComparisons(
   });
 }
 
-interface SpeedupDatum {
+/**
+ * Represents the speedup factor from reconciliation for each program and
+ * workflow in the dataset.
+ *
+ * @property fe - The median runtime for forward evaluation, in milliseconds.
+ * @property speedup - The speedup factor from reconciliation.
+ * @property x1 - The lower bound of the standard error for forward evaluation,
+ * in milliseconds.
+ * @property x2 - The upper bound of the standard error for forward evaluation,
+ * in milliseconds.
+ */
+interface TTQSpeedup {
   fe: number;
   speedup: number;
   x1: number;
@@ -182,7 +223,7 @@ interface SpeedupDatum {
 }
 
 /**
- * Generate the speedup factor from reconciliation for each program and workflow
+ * Generate the speedup factor from reconciliation for each program-workflow pair
  * in the dataset.
  *
  * @param feTTQMedians – The median runtimes for forward evaluation time-to-
@@ -191,13 +232,13 @@ interface SpeedupDatum {
  * traces.
  * @param reconTTQMedians – The median runtimes for reconciliation time-to-
  * quiescent.
- * @returns – An array of speedup factors for each program and workflow.
+ * @returns – An array of speedup factors for each program-workflow pair.
  */
-function generateSpeedups(
-  feTTQMedians: MedianRuntime[],
-  feTTQTraces: Datum[],
-  reconTTQMedians: MedianRuntime[]
-): SpeedupDatum[] {
+function generateTTQSpeedups(
+  feTTQMedians: MedianRunTime[],
+  feTTQTraces: Trace[],
+  reconTTQMedians: MedianRunTime[]
+): TTQSpeedup[] {
   return feTTQMedians.map((feTTQMedian) => {
     const reconMedian = reconTTQMedians.find(
       (med) =>
@@ -229,7 +270,21 @@ function generateSpeedups(
   });
 }
 
-interface CETTQDatum {
+/**
+ * Represents reconciliation's time-to-quiescent and reconciliation durations.
+ *
+ * @property ttq - The time-to-quiescent duration, in milliseconds.
+ * @property ce - The reconciliation duration, in milliseconds.
+ * @property x1 - The lower bound of the standard error for reconciliation, in
+ * milliseconds.
+ * @property x2 - The upper bound of the standard error for reconciliation, in
+ * milliseconds.
+ * @property y1 - The lower bound of the standard error for time-to-quiescent,
+ * in milliseconds.
+ * @property y2 - The upper bound of the standard error for time-to-quiescent,
+ * in milliseconds.
+ */
+interface ReconTTQCERunTime {
   ttq: number;
   ce: number;
   x1: number;
@@ -238,12 +293,25 @@ interface CETTQDatum {
   y2: number;
 }
 
-function generateReconCETTQ(
-  reconTTQMedians: MedianRuntime[],
-  reconTTQTraces: Datum[],
-  reconMedians: MedianRuntime[],
-  reconTraces: Datum[]
-): CETTQDatum[] {
+/**
+ * Generate reconciliation's time-to-quiescent and reconciliation durations for
+ * each program-workflow pair in the dataset.
+ *
+ * @param reconTTQMedians – The median runtimes for reconciliation time-to-
+ * quiescent.
+ * @param reconTTQTraces – The array of all reconciliation time-to-quiescent
+ * traces.
+ * @param reconMedians – The median runtimes for reconciliation code execution.
+ * @param reconTraces – The array of all reconciliation code execution traces.
+ * @returns – An array of reconciliation's time-to-quiescent and reconciliation
+ * durations for each program-workflow pair, with accompanying standard errors.
+ */
+function generateReconTTQCERunTimes(
+  reconTTQMedians: MedianRunTime[],
+  reconTTQTraces: Trace[],
+  reconMedians: MedianRunTime[],
+  reconTraces: Trace[]
+): ReconTTQCERunTime[] {
   return reconTTQMedians.map((reconIdleMed) => {
     const reconMed = reconMedians.find(
       (reconMed) =>
@@ -297,9 +365,9 @@ function generateReconCETTQ(
  * Plot Figure 5 from the paper.
  *
  * @param data – An array of pairwise comparisons between forward evaluation
- * (TTQ) and reconciliation (TTQ) runtimes for each program and workflow.
+ * (TTQ) and reconciliation (TTQ) runtimes for each program-workflow pair.
  */
-async function plotFigure5(data: PairwiseDatum[]): Promise<void> {
+async function plotFigure5(data: PairwiseMedianRunTime[]): Promise<void> {
   const plot = Plot.plot({
     document: new JSDOM().window.document,
     grid: true,
@@ -346,29 +414,16 @@ async function plotFigure5(data: PairwiseDatum[]): Promise<void> {
     ],
   });
 
-  plot.setAttributeNS(
-    "http://www.w3.org/2000/xmlns/",
-    "xmlns",
-    "http://www.w3.org/2000/svg"
-  );
-  plot.setAttributeNS(
-    "http://www.w3.org/2000/xmlns/",
-    "xmlns:xlink",
-    "http://www.w3.org/1999/xlink"
-  );
-
-  await sharp(Buffer.from(plot.outerHTML, "utf-8"))
-    .flatten({ background: "#ffffff" })
-    .toFile(path.resolve(__dirname, "../output/figure-5.png"));
+  renderPlotToPNG(plot, "figure-5");
 }
 
 /**
  * Plot Figure 6 from the paper.
  *
  * @param data – An array of pairwise comparisons between forward evaluation and
- * reconciliation runtimes for each program and workflow.
+ * reconciliation runtimes for each program-workflow pair.
  */
-async function plotFigure6(data: PairwiseDatum[]): Promise<void> {
+async function plotFigure6(data: PairwiseMedianRunTime[]): Promise<void> {
   const plot = Plot.plot({
     document: new JSDOM().window.document,
     grid: true,
@@ -415,23 +470,16 @@ async function plotFigure6(data: PairwiseDatum[]): Promise<void> {
     ],
   });
 
-  plot.setAttributeNS(
-    "http://www.w3.org/2000/xmlns/",
-    "xmlns",
-    "http://www.w3.org/2000/svg"
-  );
-  plot.setAttributeNS(
-    "http://www.w3.org/2000/xmlns/",
-    "xmlns:xlink",
-    "http://www.w3.org/1999/xlink"
-  );
-
-  await sharp(Buffer.from(plot.outerHTML, "utf-8"))
-    .flatten({ background: "#ffffff" })
-    .toFile(path.resolve(__dirname, "../output/figure-6.png"));
+  renderPlotToPNG(plot, "figure-6");
 }
 
-async function plotFigure7(data: SpeedupDatum[]): Promise<void> {
+/**
+ * Plot Figure 7 from the paper.
+ *
+ * @param data – An array of speedup factors from reconciliation for each
+ * program-workflow pair.
+ */
+async function plotFigure7(data: TTQSpeedup[]): Promise<void> {
   const plot = Plot.plot({
     document: new JSDOM().window.document,
     x: {
@@ -446,6 +494,7 @@ async function plotFigure7(data: SpeedupDatum[]): Promise<void> {
     },
     grid: true,
     style: "font-size: 12px;",
+    marginBottom: 40,
     marks: [
       Plot.dot(data, {
         x: "fe",
@@ -466,29 +515,23 @@ async function plotFigure7(data: SpeedupDatum[]): Promise<void> {
     ],
   });
 
-  plot.setAttributeNS(
-    "http://www.w3.org/2000/xmlns/",
-    "xmlns",
-    "http://www.w3.org/2000/svg"
-  );
-  plot.setAttributeNS(
-    "http://www.w3.org/2000/xmlns/",
-    "xmlns:xlink",
-    "http://www.w3.org/1999/xlink"
-  );
-
-  await sharp(Buffer.from(plot.outerHTML, "utf-8"))
-    .flatten({ background: "#ffffff" })
-    .toFile(path.resolve(__dirname, "../output/figure-7.png"));
+  renderPlotToPNG(plot, "figure-7");
 }
 
-async function plotFigure9(data: CETTQDatum[]): Promise<void> {
+/**
+ * Plot Figure 9 from the paper.
+ *
+ * @param data – Reconciliation's time-to-quiescent and code execution durations
+ * for each program-workflow pair.
+ */
+async function plotFigure9(data: ReconTTQCERunTime[]): Promise<void> {
   const plot = Plot.plot({
     document: new JSDOM().window.document,
     x: { label: "Recon (ms)", type: "log" },
     y: { label: "Recon (TTQ) (ms)", type: "log" },
     style: "font-size: 13px;",
     grid: true,
+    marginBottom: 40,
     marks: [
       Plot.dot(data, {
         x: "ce",
@@ -496,7 +539,6 @@ async function plotFigure9(data: CETTQDatum[]): Promise<void> {
         fill: "#A35200",
         fillOpacity: 0.5,
       }),
-
       Plot.link(data, {
         x1: "x1",
         x2: "x2",
@@ -520,6 +562,19 @@ async function plotFigure9(data: CETTQDatum[]): Promise<void> {
     ],
   });
 
+  renderPlotToPNG(plot, "figure-9");
+}
+
+/**
+ * Write an @observablehq/plot plot to a PNG file using sharp.
+ *
+ * @param plot – The plot to render.
+ * @param fileBaseName – The basename of the output file.
+ */
+async function renderPlotToPNG(
+  plot: Plot.Plot & (SVGSVGElement | HTMLElement),
+  fileBaseName: string
+): Promise<void> {
   plot.setAttributeNS(
     "http://www.w3.org/2000/xmlns/",
     "xmlns",
@@ -533,40 +588,42 @@ async function plotFigure9(data: CETTQDatum[]): Promise<void> {
 
   await sharp(Buffer.from(plot.outerHTML, "utf-8"))
     .flatten({ background: "#ffffff" })
-    .toFile(path.resolve(__dirname, "../output/figure-9.png"));
+    .toFile(path.resolve(__dirname, `../output/${fileBaseName}.png`));
 }
 
+/**
+ * Main function to load data, generate plots, and save them to disk.
+ */
 async function main() {
-  const { study1Fe, study1Recon, study1FeTTQ, study1ReconTTQ } =
-    await loadInputData();
+  const { fe, recon, feTTQ, reconTTQ } = await loadTraces();
 
-  const study1FeMedians = deriveMedianRuntime(study1Fe);
-  const study1ReconMedians = deriveMedianRuntime(study1Recon);
-  const study1FeTTQMedians = deriveMedianRuntime(study1FeTTQ);
-  const study1ReconTTQMedians = deriveMedianRuntime(study1ReconTTQ);
+  const feMedians = deriveMedianRunTime(fe);
+  const reconMedians = deriveMedianRunTime(recon);
+  const feTTQMedians = deriveMedianRunTime(feTTQ);
+  const reconTTQMedians = deriveMedianRunTime(reconTTQ);
 
-  const feReconTTQ = generatePairwiseComparisons(
-    study1FeTTQMedians,
-    study1FeTTQ,
-    study1ReconTTQMedians,
-    study1ReconTTQ
+  const feReconTTQ = generatePairwiseMedianRunTimes(
+    feTTQMedians,
+    feTTQ,
+    reconTTQMedians,
+    reconTTQ
   );
-  const feRecon = generatePairwiseComparisons(
-    study1FeMedians,
-    study1Fe,
-    study1ReconMedians,
-    study1Recon
+  const feRecon = generatePairwiseMedianRunTimes(
+    feMedians,
+    fe,
+    reconMedians,
+    recon
   );
-  const feTTQWithReconSpeedups = generateSpeedups(
-    study1FeTTQMedians,
-    study1FeTTQ,
-    study1ReconTTQMedians
+  const feTTQWithReconSpeedups = generateTTQSpeedups(
+    feTTQMedians,
+    feTTQ,
+    reconTTQMedians
   );
-  const reconCETTQ = generateReconCETTQ(
-    study1ReconTTQMedians,
-    study1ReconTTQ,
-    study1ReconMedians,
-    study1Recon
+  const reconCETTQ = generateReconTTQCERunTimes(
+    reconTTQMedians,
+    reconTTQ,
+    reconMedians,
+    recon
   );
 
   if (!fs.existsSync(path.resolve(__dirname, "../output"))) {
