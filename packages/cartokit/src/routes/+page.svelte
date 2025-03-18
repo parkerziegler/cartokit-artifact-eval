@@ -79,7 +79,12 @@
     });
 
     map.on('idle', () => {
-      if ($mapStore && window.programId && window.programId !== programId) {
+      if (
+        $mapStore &&
+        window.programId &&
+        window.programId !== programId &&
+        !window.requestInFlight
+      ) {
         performance.mark('reconciliation-idle-end');
         const { duration } = performance.measure(
           'reconciliation-idle',

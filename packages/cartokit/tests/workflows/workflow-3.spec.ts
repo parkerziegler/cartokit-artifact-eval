@@ -91,10 +91,32 @@ test('workflow-3', async ({ page }) => {
   // Specify the layer's Display Name.
   await page.getByLabel('Display Name').fill('Winter Temperature Change');
 
+  // Wait for a response from the API endpoint.
+  const response = page.waitForResponse(
+    'https://pub-7182966c1afe48d3949439f93d0d4223.r2.dev/wapo-winter-temperature-change.json'
+  );
+
+  // Indicate that a request is in flight.
+  await page.evaluate(() => {
+    window.requestInFlight = true;
+  });
+
   // Add the layer.
-  await page.getByRole('button', { name: 'Add' }).click();
-  await expect(page.getByTestId('add-layer-modal')).not.toBeVisible({
-    timeout: 60000
+  await Promise.all([
+    page.getByRole('button', { name: 'Add' }).click(),
+    response
+  ]);
+
+  // Wait for the loading indicator to disappear.
+  await page.getByTestId('loading-indicator').waitFor({ state: 'hidden' });
+
+  // Ensure the Add Layer modal is no longer visible.
+
+  await expect(page.getByTestId('add-layer-modal')).not.toBeVisible();
+
+  // Indicate that the request is no longer in flight.
+  await page.evaluate(() => {
+    window.requestInFlight = false;
   });
 
   // Wait for MapLibre to render the Winter Temperature Change layer.
