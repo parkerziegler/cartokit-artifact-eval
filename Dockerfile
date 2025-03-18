@@ -15,7 +15,7 @@ RUN corepack use pnpm@9.12.1
 
 # Clone the artifact eval
 WORKDIR /app
-RUN git clone -b https://github.com/parkerziegler/cartokit-artifact-eval .
+RUN git clone https://github.com/parkerziegler/cartokit-artifact-eval .
 RUN pnpm install
 
 # Configure environment variables for cartokit
