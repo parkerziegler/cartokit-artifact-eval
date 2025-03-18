@@ -589,7 +589,7 @@ async function renderPlotToPNG(
 
   await sharp(Buffer.from(plot.outerHTML, "utf-8"))
     .flatten({ background: "#ffffff" })
-    .toFile(path.resolve(__dirname, `../output/${fileBaseName}.png`));
+    .toFile(path.resolve(__dirname, `../figures/${fileBaseName}.png`));
 }
 
 /**
@@ -694,8 +694,8 @@ async function main() {
     recon
   );
 
-  if (!fs.existsSync(path.resolve(__dirname, "../output"))) {
-    await fsPromises.mkdir(path.resolve(__dirname, "../output"));
+  if (!fs.existsSync(path.resolve(__dirname, "../figures"))) {
+    await fsPromises.mkdir(path.resolve(__dirname, "../figures"));
   }
 
   plotFigure5(feReconTTQ);
@@ -719,8 +719,12 @@ async function main() {
       reconCETTQCorrelation,
   };
 
+  if (!fs.existsSync(path.resolve(__dirname, "../stats"))) {
+    await fsPromises.mkdir(path.resolve(__dirname, "../stats"));
+  }
+
   await fsPromises.writeFile(
-    path.resolve(__dirname, "../output/stats.json"),
+    path.resolve(__dirname, "../stats/stats.json"),
     JSON.stringify(stats, null, 2)
   );
 }
