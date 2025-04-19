@@ -18,9 +18,8 @@ target_stats=/app/packages/cartokit-figures/stats
 docker run \
     -d \
     --shm-size=2g \
-    -e TRIALS=10 \
     --mount type=bind,source="$source_fe",target="$target_fe" \
     --mount type=bind,source="$source_recon",target="$target_recon" \
     --mount type=bind,source="$source_figures",target="$target_figures" \
     --mount type=bind,source="$source_stats",target="$target_stats" \
-    pldi25ae-cartokit
+    pldi25ae-cartokit-arm64/v8

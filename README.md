@@ -1,13 +1,13 @@
 # Getting Started Guide
 
-To evaluate this artifact, please use the Docker image from the Zenodo archive, `pldi25ae-cartokit.tar.gz`. As a prerequisite, you'll need to [install Docker](https://docs.docker.com/desktop/?_gl=1*1mbp9px*_gcl_au*NTkzMDM5NjgzLjE3NDIyMjg1MjY.*_ga*MTkxMDY4NTk0Ni4xNzQyMjI4NTI2*_ga_XJWPQMJYHQ*MTc0MjIyODUyNi4xLjEuMTc0MjIyODUyNy41OS4wLjA.) on your host machine.
+To evaluate this artifact, please use the appropriate Docker image for your machine's architecture from the Zenodo archive (`pldi25ae-cartokit-amd64.tar.gz` for x86-64 or `pldi25ae-cartokit-arm64v8.tar.gz` for ARM64). As a prerequisite, you'll need to [install Docker](https://docs.docker.com/desktop/?_gl=1*1mbp9px*_gcl_au*NTkzMDM5NjgzLjE3NDIyMjg1MjY.*_ga*MTkxMDY4NTk0Ni4xNzQyMjI4NTI2*_ga_XJWPQMJYHQ*MTc0MjIyODUyNi4xLjEuMTc0MjIyODUyNy41OS4wLjA.) on your host machine.
 
 **Step 1: Load the Docker image.**
 
-To load the Docker image, execute the following command in your shell:
+To load the Docker image, execute the following command in your shell (choosing the correct file name suffix based on your machine's architecture):
 
 ```sh
-docker load -i pldi25ae-cartokit.tar.gz
+docker load -i pldi25ae-cartokit-<amd64|arm64v8>.tar.gz
 ```
 
 **Step 2: Verify the image is loaded.**
@@ -21,8 +21,8 @@ docker images
 You should see output like the following:
 
 ```
-REPOSITORY               TAG       IMAGE ID       CREATED        SIZE
-pldi25ae-cartokit        latest    b1d2ecf2d4c3   18 hours ago   2.71GB
+REPOSITORY                 TAG       IMAGE ID       CREATED        SIZE
+pldi25ae-cartokit-amd64    latest    b1d2ecf2d4c3   18 hours ago   2.71GB
 ```
 
 **Step 3: Allocate additional memory for Docker.**
@@ -33,7 +33,7 @@ That's it! You should be all set to move on to the step-by-step instructions bel
 
 # Step-by-Step Instructions
 
-The steps below assume you've successfully loaded the `pldi25ae-cartokit` image from above.
+The steps below assume you've successfully loaded the `pldi25ae-cartokit-<amd64|arm64v8>` image from above.
 
 ## Step 1: Run benchmark suite and generate figures
 
@@ -47,22 +47,93 @@ As we are measuring both code execution and web browser rendering run times, we 
 
 ### Running the benchmark suite and generating the figures
 
-We provide two scripts to run the benchmark suite and generate the figures:
+We provide two scripts (per target architecture) to run the benchmark suite and generate the figures. **These scripts should be run on the host machine**; they handle configuring directories for generated output, binding mounts, and invoking `docker run`:
 
-1. **`benchmark-lite.sh` (recommended)** runs the full set of benchmarks with three trials per benchmark, generating figures and high-level statistics from the collected data. This is fewer than the 10 trials in the paper, but provides a similar view of general performance. On our machine, running `./benchmark-lite.sh` takes about 40 minutes in Docker.
-2. **`benchmark-full.sh`** runs the full set of benchmarks with 10 trials per benchmark, as in the paper, and generates figures and high-level statistics from the collected data. On our machine, running `./benchmark-full.sh` takes about 2.25 hours in Docker.
+1. **`benchmark-lite-<amd64|arm64v8>.sh` (recommended)** runs the full set of benchmarks with three trials per benchmark, generating figures and high-level statistics from the collected data. This is fewer than the 10 trials in the paper, but provides a similar view of general performance. On our machine, running `bash benchmark-lite-amd64.sh` takes about 40 minutes to run to completion.
+2. **`benchmark-full-<amd64|arm64v8>.sh`** runs the full set of benchmarks with 10 trials per benchmark, as in the paper, and generates figures and high-level statistics from the collected data. On our machine, running `bash benchmark-full-amd64.sh` takes about 2.25 hours to run to completion.
 
-To run either script, execute the following commands in your shell:
+To run either script, execute the following command in your shell:
 
 ```sh
-# Update permissions
-chmod +x benchmark-<lite|full>.sh
-
-# Run the benchmarks
-./benchmark-<lite|full>.sh
+bash benchmark-<lite|full>-<amd64|arm64v8>.sh
 ```
 
 Both of these scripts produce output in the `results` directory on the **host machine**. The `results/data/recon` directory contains raw timing data for reconciliation code execution run times (`recon.json`) and reconciliation time-to-quiescent run times (`recon-ttq.json`). The `results/data/fe` directory contains raw timing data for forward evaluation code execution run times (`fe.json`) and forward evaluation time-to-quiescent run times (`recon-ttq.json`). The `results/figures` directory contains the generated figures as PNGs. Finally, the `results/stats` directory contains relevant statistics for the claims in the paper (see below).
+
+Note that we run Docker in [detached mode](https://docs.docker.com/guides/golang/run-containers/#run-in-detached-mode). Logs are available in Docker Desktop by locating the container running the image in the **Containers** tab. If you'd prefer to see logs in your shell rather than Docker Desktop, you can run:
+
+```sh
+docker logs --follow <container_id>
+```
+
+### Expected Warnings
+
+You may see a few warnings or errors while running the benchmark suite. In particular, don't be alarmed if you see any of the following:
+
+**Warnings about `tsconfig.json` resolution.**
+
+```
+[WebServer] ▲ [WARNING] Cannot find base config file "./.svelte-kit/tsconfig.json" [tsconfig.json]
+[WebServer]
+[WebServer] tsconfig.json:2:13:
+[WebServer] 2 │ "extends": "./.svelte-kit/tsconfig.json",
+[WebServer] ╵ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[WebServer]
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+```
+
+On the very first build of `cartokit`, the `.svelte-kit` directory may not yet have been generated by the build process. This has no effect on the ability of the system to run correctly.
+
+**Runtime errors about "step" expressions.**
+
+```
+Console message:  Error: layers.transponder-gaps__1.paint.fill-color[13]: Input/output pairs for "step" expressions must be arranged with input values in strictly ascending order.
+  at Zu (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:13:10214)
+  at LA._validate (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:13:31609)
+  at LA.setPaintProperty (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:13:29891)
+  at Pc.setPaintProperty (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:13:380780)
+  at a.Map.setPaintProperty (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:588:209596)
+  at I1 (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:618:58915)
+  at xq (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:618:58189)
+  at Ka (http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:618:58021)
+  at http://localhost:4173/_app/immutable/nodes/2.BGfBE4il.js:649:14487
+  at Object.l [as update] (http://localhost:4173/_app/immutable/chunks/bxKe3zuz.js:1:332)
+```
+
+This is an issue only in certain workflows, where the ordering of user interactions to change a map layer's mapping of data values to fill color can introduce temporary errors. Again, these errors do not affect the ability of the system or the test to run correctly.
+
+**Flaky tests or test timeouts.**
+
+```
+1) [chromium] › workflows/workflow-4.spec.ts:21:1 › workflow-4 ───────────────────────────────────
+
+Error: Timed out 5000ms waiting for expect(locator).toBeVisible()
+
+Locator: locator('#properties')
+Expected: visible
+Received: <element(s) not found>
+Call log:
+  - expect.toBeVisible with timeout 5000ms
+  - waiting for locator('#properties')
+
+  127 |
+  128 |   // Ensure that the Properties Panel is visible.
+> 129 |   await expect(page.locator('#properties')).toBeVisible();
+      |                                             ^
+  130 |
+  131 |   // Remove the layer's stroke.
+  132 |   await page.evaluate(() => {
+
+     at /app/packages/cartokit/tests/workflows/workflow-4.spec.ts:129:45
+
+ attachment #1: video (video/webm) ──────────────────────────────────────────────────────────────
+test-results/workflows-workflow-4-workflow-4-chromium/video.webm
+────────────────────────────────────────────────────────────────────────────────────────────────
+```
+
+Occasionally, you may get a flaky Playwright test or a test that times out trying to complete the workflow. We've configured our Playwright setup to retry every test twice, so the chances of none of the three trials succeeding is quite low. However, to ensure smooth results, run Docker with 16GB of RAM (or the maximum available RAM on your system) and check that you have at least a moderately fast WiFi connection.
 
 ### Steps to Take
 
@@ -101,3 +172,7 @@ If you would like to take a look at the `cartokit` codebase, you can find it at 
 ## Optional: Using `cartokit`
 
 If you would like to use `cartokit` manually, you can access the production deployment at [https://alpha.cartokit.dev](https://alpha.cartokit.dev). Additional documentation is available at [https://docs.cartokit.dev](https://alpha.cartokit.dev).
+
+```
+
+```
