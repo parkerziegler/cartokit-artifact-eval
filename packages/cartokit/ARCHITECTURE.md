@@ -80,3 +80,17 @@ The following table includes the file and line numbers for start and end points 
 ### Playwright Tests
 
 The workflows referenced in Section 6 of the paper are implemented as Playwright end-to-end tests and located in `tests/workflows`. Individual workflow files (e.g., `workflow-1.spec.ts`, `workflow-2.spec.ts`) correspond directly to the benchmarks referenced in Table 1.
+
+As part of the evaluation configuration, `cartokit` logs reconciliation code execution timings and reconciliation TTQ timings to the console. The Playwright workflows are set up to wait for `console` events as part of normal operation. Thus, the typical structure of a workflow is:
+
+1. Initiate a GUI interaction via Playwright, which triggers reconciliation.
+2. Our instrumentation (see above) captures reconciliation code execution and TTQ timings and logs them to the `console`.
+3. Use Playwright's [`waitForEvent`](https://playwright.dev/docs/api/class-page#page-wait-for-event) API to block until we receive the `console` event.
+4. Capture the timings and write them to a local file on disk.
+5. Continue until all GUI interactions are completed and the test exits.
+
+This structure ensures a serializable order on GUI interactions and timings, such that we get exactly one reconciliation code execution timing and one reconciliation TTQ timing per GUI interaction. The resulting data is written to `tests/results/recon.json` (for code execution timings) and `tests/results/recon-ttq.json` (for TTQ timings).
+
+## Modifying the Codebase
+
+Researchers should feel free to modify or extend our `patch`-`recon` architecture to experiment with alternative implementations of these algorithms. To alter the `patch` implementation, one should start by looking at the structure of `CartoKitIR` (if aiming to change the definition of programs) or the callback functions passed to `ir.update` in `src/lib/interaction/update.ts` (if aiming to change how program transformations are implemented). To alter the `recon` implementation, one should start by looking closely at the statements in each diff's `case` block in `src/lib/interaction/update.ts`. Some familiarity with the APIs of our map rendering library, [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/), will also be extremely useful in scaffolding algorithmic changes.
