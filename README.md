@@ -167,12 +167,10 @@ And that's all folks! Thanks a lot for taking the time to evaluate our paper! Ho
 
 ## Optional: Looking at the `cartokit` codebase
 
-If you would like to take a look at the `cartokit` codebase, you can find it at [https://github.com/parkerziegler/cartokit](https://github.com/parkerziegler/cartokit).
+If you would like to take a look at the `cartokit` codebase, you can find an archived snapshot of v0.5.2 (the version submitted for review) in the `packages/cartokit` directory of the [linked Zenodo archive](https://doi.org/10.5281/zenodo.15047735). The file `packages/cartokit/ARCHITECTURE.md` provides documentation on how to navigate the codebase, connecting the key components in our `patch`-`recon` implementation (described in the paper) to specific files and line numbers. The latest source for `cartokit`—as well as all previous versions—are available [on GitHub](https://github.com/parkerziegler/cartokit).
+
+If you would like to take a look at the setup for capturing forward evaluation code execution run times and forward evaluation TTQ run times, take a look at the `packages/cartokit-ablation` directory of the [linked Zenodo archive](https://doi.org/10.5281/zenodo.15047735). The file `packages/cartokit-ablation/README.md` provides documentation on how to navigate the codebase.
 
 ## Optional: Using `cartokit`
 
 If you would like to use `cartokit` manually, you can access the production deployment at [https://alpha.cartokit.dev](https://alpha.cartokit.dev). Additional documentation is available at [https://docs.cartokit.dev](https://alpha.cartokit.dev).
-
-```
-
-```
