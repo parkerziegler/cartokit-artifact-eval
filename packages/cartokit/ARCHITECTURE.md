@@ -11,7 +11,7 @@ The table below documents the directory structure and the contents of each direc
 | `.github`             | Build, test, and deployment pipelines for `cartokit`'s CI setup, run via GitHub Actions.                                      |
 | `assets`              | Static assets referenced in the repository README.                                                                            |
 | `src/lib/assets`      | Static assets (images) used by [Svelte](https://svelte.dev/) components in `cartokit`.                                        |
-| `src/lib/codegen`     | `cartokit`'s code generation algorithm, which compiles $ \mathcal{L}\_{ck} $ programs into JavaScript or TypeScript programs. |
+| `src/lib/codegen`     | `cartokit`'s code generation algorithm, which compiles $ \mathcal{L}_{ck} $ programs into JavaScript or TypeScript programs. |
 | `src/lib/components`  | [Svelte](https://svelte.dev/) components that make up the `cartokit` user interface.                                          |
 | `src/lib/interaction` | TypeScript modules containing functionality for handling user interface interactions in `cartokit`.                           |
 | `src/lib/stores`      | [Svelte stores](https://svelte.dev/docs/svelte/svelte-store) that model application state in `cartokit`.                      |
@@ -23,21 +23,21 @@ The table below documents the directory structure and the contents of each direc
 
 ## `patch`-`recon` Implementation
 
-The primary contribution of the PLDI '25 paper is the idea of _patch_-_reconciliation_ _correspondence_ and our `patch`-`recon` architecture. To introduce `patch`-`recon`, Section 4.1 of the paper instantiates the technique in a language, $ \mathcal{L}\_{ck} $ composed of:
+The primary contribution of the PLDI '25 paper is the idea of _patch_-_reconciliation_ _correspondence_ and our `patch`-`recon` architecture. To introduce `patch`-`recon`, Section 4.1 of the paper instantiates the technique in a language, $ \mathcal{L}_{ck} $ composed of:
 
-- A set of programs, $ Prog\_{\mathcal{L}\_{ck}} $
-- A set of values, $ Val\_{\mathcal{L}\_{ck}} $
-- A semantics **eval**: $ Prog\_{\mathcal{L}\_{ck}} \rightarrow Val\_{\mathcal{L}\_{ck}} $
-- A set of diffs, $ Diff\_{\mathcal{L}\_{ck}} $
-- A syntactic diffing operation, **patch**: $ Diff\_{\mathcal{L}\_{ck}} \times Prog\_{\mathcal{L}\_{ck}} \rightarrow Prog\_{\mathcal{L}\_{ck}} $
+- A set of programs, $ Prog_{\mathcal{L}_{ck}} $
+- A set of values, $ Val_{\mathcal{L}_{ck}} $
+- A semantics **eval**: $ Prog_{\mathcal{L}_{ck}} \rightarrow Val_{\mathcal{L}_{ck}} $
+- A set of diffs, $ Diff_{\mathcal{L}_{ck}} $
+- A syntactic diffing operation, **patch**: $ Diff_{\mathcal{L}_{ck}} \times Prog_{\mathcal{L}_{ck}} \rightarrow Prog_{\mathcal{L}_{ck}} $
 
 Section 4.2 subsequently introduces:
 
-- A reconciliation function, **recon**: $ Diff\_{\mathcal{L}\_{ck}} \times Val\_{\mathcal{L}\_{ck}} \rightarrow Val\_{\mathcal{L}\_{ck}} $
+- A reconciliation function, **recon**: $ Diff_{\mathcal{L}_{ck}} \times Val_{\mathcal{L}_{ck}} \rightarrow Val_{\mathcal{L}_{ck}} $
 
 Below, we point to the relevant sections of the codebase to locate each of these components.
 
-### Programs ($ Prog\_{\mathcal{L}\_{ck}} $)
+### Programs ($ Prog_{\mathcal{L}_{ck}} $)
 
 Programs are defined by `interface CartoKitIR` in `src/lib/types/index.ts`, L358. This `interface` corresponds to the grammar defined in Figure 3 of the paper. `cartokit`'s active program, which is modified by the **patch** operation on every GUI interaction, is modeled as a Svelte store in `src/lib/stores/ir.ts`. The initial program definition in that file corresponds to the empty program with no layers.
 
@@ -45,17 +45,17 @@ In our implementation, map metadata like the `zoom`, `center`, and `basemap` are
 
 **Note: The IR (intermediate representation) terminology in the codebase is a holdover from the early days of `cartokit`'s development, where we initially thought of our language as an intermediate representation of the JavaScript program presented to the user in the interface.**
 
-### Values ($ Val\_{\mathcal{L}\_{ck}} $)
+### Values ($ Val_{\mathcal{L}_{ck}} $)
 
 Values in `cartokit` are maps as defined by `interface Map` from our map rendering library, MapLibre GL JS. Their full definition can be found in [the MapLibre GL JS repository](https://github.com/maplibre/maplibre-gl-js/blob/3a1f71f00913bf85d614d9693f5abcdd8f8bae8e/src/ui/map.ts#L475).
 
-### **eval** ($ Prog\_{\mathcal{L}\_{ck}} \rightarrow Val\_{\mathcal{L}\_{ck}} $)
+### **eval** ($ Prog_{\mathcal{L}_{ck}} \rightarrow Val_{\mathcal{L}_{ck}} $)
 
 **eval** is defined by unioning the results of executing **evalLayer** on all layers in the program. **evalLayer** corresponds to the `addLayer` function defined in `src/lib/interaction/layer.ts`, L33.
 
-### Diffs ($ Diff\_{\mathcal{L}\_{ck}} $)
+### Diffs ($ Diff_{\mathcal{L}_{ck}} $)
 
-The core definition of all diffs is captured by `type DispatchLayerUpdateParams` in `src/lib/interaction/update.ts`, L184. This type is a tagged union, with all members composed of a unique `type` (corresponding roughly to a channel, $ C $, in $ \mathcal{L}\_{ck} $) and a `payload` (corresponding roughly to a function, $ fn $, in $ \mathcal{L}\_{ck} $). The diffs `RemoveFillUpdate` and `RemoveStrokeUpdate` are specializations of the **removeChannel** diff in the paper. The diffs `LayerTypeUpdate` and `TransformationUpdate` are specializations of the **transformLayer** diff in the paper. The remainder of diffs in the union are specializations of the **setChannel** diff in the paper. Finally, the **addLayer** diff is implemented directly as part of the `addSource` function in `src/lib/interaction/source.ts`, L84.
+The core definition of all diffs is captured by `type DispatchLayerUpdateParams` in `src/lib/interaction/update.ts`, L184. This type is a tagged union, with all members composed of a unique `type` (corresponding roughly to a channel, $ C $, in $ \mathcal{L}_{ck} $) and a `payload` (corresponding roughly to a function, $ fn $, in $ \mathcal{L}_{ck} $). The diffs `RemoveFillUpdate` and `RemoveStrokeUpdate` are specializations of the **removeChannel** diff in the paper. The diffs `LayerTypeUpdate` and `TransformationUpdate` are specializations of the **transformLayer** diff in the paper. The remainder of diffs in the union are specializations of the **setChannel** diff in the paper. Finally, the **addLayer** diff is implemented directly as part of the `addSource` function in `src/lib/interaction/source.ts`, L84.
 
 ### `patch` and `recon`
 
